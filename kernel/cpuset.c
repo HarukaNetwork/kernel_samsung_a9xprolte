@@ -1464,8 +1464,7 @@ static int cpuset_allow_attach(struct cgroup *cgrp,
 		tcred = __task_cred(task);
 
 		if ((current != task) && !capable(CAP_SYS_ADMIN) &&
-		    !uid_eq(cred->euid, tcred->uid) &&
-		    !uid_eq(cred->euid, tcred->suid))
+		    cred->euid != tcred->uid && cred->euid != tcred->suid)
 			return -EACCES;
 	}
 
@@ -2082,7 +2081,7 @@ struct cgroup_subsys cpuset_subsys = {
 	.css_offline = cpuset_css_offline,
 	.css_free = cpuset_css_free,
 	.can_attach = cpuset_can_attach,
-	.allow_attach   = cpuset_allow_attach,
+	.allow_attach = cpuset_allow_attach,
 	.cancel_attach = cpuset_cancel_attach,
 	.attach = cpuset_attach,
 	.bind	= cpuset_bind,
