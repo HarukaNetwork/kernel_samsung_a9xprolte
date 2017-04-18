@@ -1,4 +1,4 @@
-/*
+w/*
  *  linux/drivers/mmc/core/mmc.c
  *
  *  Copyright (C) 2003-2004 Russell King, All Rights Reserved.
@@ -1950,29 +1950,6 @@ reinit:
 		}
 	}
 
-	/*
-	 * Start auto bkops, if supported.
-	 *
-	 * Note: This leaves the possibility of having both manual and
-	 * auto bkops running in parallel. The runtime implementation
-	 * will allow this, but ignore bkops exceptions on the premises
-	 * that auto bkops will eventually kick in and the device will
-	 * handle bkops without START_BKOPS from the host.
-	 */
-	if (mmc_card_support_auto_bkops(card)) {
-		/*
-		 * Ignore the return value of setting auto bkops.
-		 * If it failed, will run in backward compatible mode.
-		 */
-		err = mmc_set_auto_bkops(card, true);
-		if (err)
-			pr_err("%s: %s: Failed to enable auto-bkops: err: %d\n",
-			       mmc_hostname(card->host), __func__, err);
-		else
-			printk_once("%s: %s: Enabled auto-bkops on device\n",
-				    mmc_hostname(card->host), __func__);
-	}
-
 	if (card->ext_csd.cmdq_support && (card->host->caps2 &
 					   MMC_CAP2_CMD_QUEUE)) {
 		err = mmc_select_cmdq(card);
@@ -2120,14 +2097,6 @@ static int _mmc_suspend(struct mmc_host *host, bool is_suspend)
 
 	if (!mmc_try_claim_host(host))
 		return -EBUSY;
-
-	/*
-	 * Disable clock scaling before suspend and enable it after resume so
-	 * as to avoid clock scaling decisions kicking in during this window.
-	 */
-	 
-	if (mmc_can_scale_clk(host))
-	    mmc_disable_clk_scaling(host);
 
 	err = mmc_flush_cache(host->card);
 	if (err)
