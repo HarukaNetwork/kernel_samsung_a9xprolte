@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2018, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2009-2017, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -40,9 +40,6 @@
 #define PANEL_DATA_NODE_LEN 80
 
 static DEFINE_MUTEX(mdss_debug_lock);
-/* Hex number + whitespace */
-#define NEXT_VALUE_OFFSET 3
-
 static char panel_reg[2] = {DEFAULT_READ_PANEL_POWER_MODE_REG, 0x00};
 
 static int panel_debug_base_open(struct inode *inode, struct file *file)
@@ -94,10 +91,8 @@ static ssize_t panel_debug_base_offset_write(struct file *file,
 	if (cnt > (dbg->max_offset - off))
 		cnt = dbg->max_offset - off;
 
-	mutex_lock(&mdss_debug_lock);
 	dbg->off = off;
 	dbg->cnt = cnt;
-	mutex_unlock(&mdss_debug_lock);
 
 	pr_debug("offset=%x cnt=%d\n", off, cnt);
 
@@ -141,7 +136,7 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 	struct mdss_debug_base *dbg = file->private_data;
 	char buf[PANEL_TX_MAX_BUF] = {0x0};
 	char reg[PANEL_TX_MAX_BUF] = {0x0};
-	u32 len = 0, value = 0;
+	u32 len = 0, step = 0, value = 0;
 	char *bufp;
 
 	struct mdss_data_type *mdata = mdss_res;
@@ -164,21 +159,13 @@ static ssize_t panel_debug_base_reg_write(struct file *file,
 	buf[count] = 0;	/* end of string */
 
 	bufp = buf;
-	/* End of a hex value in given string */
-	bufp[NEXT_VALUE_OFFSET - 1] = 0;
-	while (kstrtouint(bufp, 16, &value) == 0) {
+	while (sscanf(bufp, "%x%n", &value, &step) > 0) {
 		reg[len++] = value;
 		if (len >= PANEL_TX_MAX_BUF) {
 			pr_err("wrong input reg len\n");
 			return -EFAULT;
 		}
-		bufp += NEXT_VALUE_OFFSET;
-		if ((bufp >= (buf + count)) || (bufp < buf)) {
-			pr_warn("%s,buffer out-of-bounds\n", __func__);
-			break;
-		}
-		/* End of a hex value in given string */
-		bufp[NEXT_VALUE_OFFSET - 1] = 0;
+		bufp += step;
 	}
 	if (len < PANEL_CMD_MIN_TX_COUNT) {
 		pr_err("wrong input reg len\n");
@@ -390,39 +377,6 @@ static int mdss_debug_base_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-/**
- * mdss_debug_base_is_valid_range - verify if requested memory range is valid
- * @off: address offset in bytes
- * @cnt: memory size in bytes
- * Return: true if valid; false otherwise
- */
-static bool mdss_debug_base_is_valid_range(u32 off, u32 cnt)
-{
-	struct mdss_data_type *mdata = mdss_mdp_get_mdata();
-	struct mdss_debug_data *mdd = mdata->debug_inf.debug_data;
-	struct range_dump_node *node;
-	struct mdss_debug_base *base;
-
-	pr_debug("check offset=0x%x cnt=0x%x\n", off, cnt);
-
-	list_for_each_entry(base, &mdd->base_list, head) {
-		list_for_each_entry(node, &base->dump_list, head) {
-			pr_debug("%s: start=0x%x end=0x%x\n", node->range_name,
-					node->offset.start, node->offset.end);
-
-			if (node->offset.start <= off
-					&& off <= node->offset.end
-					&& off + cnt <= node->offset.end) {
-				pr_debug("valid range requested\n");
-				return true;
-			}
-		}
-	}
-
-	pr_err("invalid range requested\n");
-	return false;
-}
-
 static ssize_t mdss_debug_base_offset_write(struct file *file,
 		    const char __user *user_buf, size_t count, loff_t *ppos)
 {
@@ -445,17 +399,13 @@ static ssize_t mdss_debug_base_offset_write(struct file *file,
 	if (off % sizeof(u32))
 		return -EINVAL;
 
-	if (sscanf(buf, "%5x %x", &off, &cnt) != 2)
-		return -EFAULT;
+	sscanf(buf, "%5x %x", &off, &cnt);
 
 	if (off > dbg->max_offset)
 		return -EINVAL;
 
 	if (cnt > (dbg->max_offset - off))
 		cnt = dbg->max_offset - off;
-
-	if (!mdss_debug_base_is_valid_range(off, cnt))
-		return -EINVAL;
 
 	mutex_lock(&mdss_debug_lock);
 	dbg->off = off;

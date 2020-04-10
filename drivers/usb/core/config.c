@@ -516,18 +516,18 @@ static int usb_parse_configuration(struct usb_device *dev, int cfgidx,
 			d = (struct usb_interface_assoc_descriptor *)header;
 			if (d->bLength < USB_DT_INTERFACE_ASSOCIATION_SIZE) {
 				dev_warn(ddev,
-					 "config %d has an invalid interface association descriptor of length %d, skipping\n",
-					 cfgno, d->bLength);
+					"config %d has an invalid interface association descriptor of length %d, skipping\n",
+					cfgno, d->bLength);
 				continue;
 			}
-
+		
 			if (iad_num == USB_MAXIADS) {
 				dev_warn(ddev, "found more Interface "
 					       "Association Descriptors "
 					       "than allocated for in "
 					       "configuration %d\n", cfgno);
 			} else {
-				config->intf_assoc[iad_num] = d;
+				config->intf_assoc[iad_num] = d;	
 				iad_num++;
 			}
 
@@ -633,7 +633,7 @@ void usb_destroy_configuration(struct usb_device *dev)
 
 	if (dev->rawdescriptors) {
 		for (i = 0; i < dev->descriptor.bNumConfigurations &&
-				i < USB_MAXCONFIG; i++)
+              i < USB_MAXCONFIG; i++)
 			kfree(dev->rawdescriptors[i]);
 
 		kfree(dev->rawdescriptors);
@@ -641,12 +641,12 @@ void usb_destroy_configuration(struct usb_device *dev)
 	}
 
 	for (c = 0; c < dev->descriptor.bNumConfigurations &&
-			c < USB_MAXCONFIG; c++) {
+          c < USB_MAXCONFIG; c++) {
 		struct usb_host_config *cf = &dev->config[c];
 
 		kfree(cf->string);
 		for (i = 0; i < cf->desc.bNumInterfaces &&
-				i < USB_MAXINTERFACES; i++) {
+              i < USB_MAXINTERFACES; i++) {
 			if (cf->intf_cache[i])
 				kref_put(&cf->intf_cache[i]->ref,
 					  usb_release_interface_cache);
@@ -831,12 +831,12 @@ int usb_get_bos_descriptor(struct usb_device *dev)
 	for (i = 0; i < num; i++) {
 		buffer += length;
 		cap = (struct usb_dev_cap_header *)buffer;
-
+		
 		if (total_len < sizeof(*cap) || total_len < cap->bLength) {
-			dev->bos->desc->bNumDeviceCaps = i;
+        dev->bos->desc->bNumDeviceCaps = i;
 			break;
-		}
-		length = cap->bLength;
+			}
+      length = cap->bLength;
 		total_len -= length;
 
 		if (cap->bDescriptorType != USB_DT_DEVICE_CAPABILITY) {
